@@ -1,0 +1,5 @@
+.vscode/
+manage.py
+static/
+*.pyc
+settings.env
