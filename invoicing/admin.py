@@ -1,12 +1,16 @@
 from decimal import Decimal
 from functools import reduce
-from typing import Any, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 from django.contrib import admin
 from django.db.models.query import QuerySet
 from django.http.request import HttpRequest
 
 from invoicing.models import Product, Klant, Invoice, InvoiceLine
+
+
+def format_price(price: Decimal) -> str:
+    return '{0:.2f}'.format(price)
 
 
 class BtwFilter(admin.SimpleListFilter):
@@ -30,12 +34,17 @@ class InvoiceLine(admin.TabularInline):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'type', 'btw')
+    list_display = ('name', 'formatted_price', 'type', 'btw')
     search_fields = ('name',)
     list_filter = ('type', BtwFilter)
 
     def get_queryset(self, request: HttpRequest) -> QuerySet[Product]:
         return super().get_queryset(request).order_by('name')
+
+    def formatted_price(self, obj: Optional[Product] = None) -> Decimal:
+        return format_price(obj.price)
+
+    formatted_price.short_description = 'price'
 
 
 @admin.register(Klant)
@@ -69,14 +78,11 @@ class InvoiceAdmin(admin.ModelAdmin):
             }
         )
 
-    def format_price(self, price: Decimal) -> str:
-        return '{0:.2f}'.format(price)
-
     def btw(self, invoice: Invoice = None) -> Decimal:
-        return self.format_price(self.generate_lines(invoice)['btw'])
+        return format_price(self.generate_lines(invoice)['btw'])
 
     def price_ex(self, invoice: Invoice = None) -> Decimal:
-        return self.format_price(self.generate_lines(invoice)['price_ex'])
+        return format_price(self.generate_lines(invoice)['price_ex'])
 
     def price(self, invoice: Invoice = None) -> Decimal:
-        return self.format_price(self.generate_lines(invoice)['price'])
+        return format_price(self.generate_lines(invoice)['price'])
